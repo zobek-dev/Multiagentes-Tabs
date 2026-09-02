@@ -1,6 +1,6 @@
 [package]
 name = "multiagentes"
-version = "0.1.0"
+version = "0.1.1"
 description = "Gestor de multiples terminales para agentes de linea de comandos"
 authors = ["mediahuella"]
 edition = "2021"
