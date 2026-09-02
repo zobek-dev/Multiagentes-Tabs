@@ -17,21 +17,22 @@ import {
 import { assignConversations, groupKey, type SessionRef } from "./assign";
 import { Session } from "./session";
 
-const $ = <T extends HTMLElement>(id: string): T => {
+/** `getElementById` con tipo y con un fallo claro si el elemento no está. */
+const byId = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
   if (!el) throw new Error(`falta el elemento #${id}`);
   return el as T;
 };
 
-const sessionList = $("session-list");
-const terminals = $("terminals");
-const emptyState = $("empty");
-const activeTitle = $("active-title");
-const activeCwd = $("active-cwd");
-const launcher = $("launcher");
-const profileGrid = $("profile-grid");
-const cwdInput = $<HTMLInputElement>("cwd-input");
-const cmdInput = $<HTMLInputElement>("cmd-input");
+const sessionList = byId("session-list");
+const terminals = byId("terminals");
+const emptyState = byId("empty");
+const activeTitle = byId("active-title");
+const activeCwd = byId("active-cwd");
+const launcher = byId("launcher");
+const profileGrid = byId("profile-grid");
+const cwdInput = byId<HTMLInputElement>("cwd-input");
+const cmdInput = byId<HTMLInputElement>("cmd-input");
 
 const LAST_CWD_KEY = "multiagentes.lastCwd";
 
@@ -423,10 +424,10 @@ async function submitLauncher(): Promise<void> {
   await createSession(selectedProfile, cwd, command);
 }
 
-$("new-session").addEventListener("click", openLauncher);
-$("launch-cancel").addEventListener("click", closeLauncher);
-$("launch-go").addEventListener("click", () => void submitLauncher());
-$("pick-cwd").addEventListener("click", async () => {
+byId("new-session").addEventListener("click", openLauncher);
+byId("launch-cancel").addEventListener("click", closeLauncher);
+byId("launch-go").addEventListener("click", () => void submitLauncher());
+byId("pick-cwd").addEventListener("click", async () => {
   const picked = await open({ directory: true, multiple: false, defaultPath: cwdInput.value || undefined });
   if (typeof picked === "string") cwdInput.value = picked;
 });
@@ -439,11 +440,11 @@ launcher.addEventListener("click", (event) => {
   }),
 );
 
-$("btn-clear").addEventListener("click", () => active?.clear());
-$("btn-restart").addEventListener("click", () => {
+byId("btn-clear").addEventListener("click", () => active?.clear());
+byId("btn-restart").addEventListener("click", () => {
   if (active) void restartSession(active);
 });
-$("btn-close").addEventListener("click", () => {
+byId("btn-close").addEventListener("click", () => {
   if (active) void closeSession(active);
 });
 
