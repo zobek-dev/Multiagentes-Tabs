@@ -31,6 +31,7 @@ pub fn run() {
             pty::pty_list,
             pty::which,
             agents::conversations_for,
+            agents::create_conversation,
             store::sessions_load,
             store::session_save,
             store::session_delete,

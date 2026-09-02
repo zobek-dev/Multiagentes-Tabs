@@ -7,6 +7,7 @@ const { commandToStore, effectiveCommand, profileById, resumeCommandFor, startCo
   await import("./profiles");
 
 const claude = profileById("claude")!;
+const cursor = profileById("cursor")!;
 const gemini = profileById("gemini")!;
 const shell = profileById("shell")!;
 const UUID = "e7d036f2-c7d0-4e13-9c2f-6cf1afaf81da";
@@ -62,5 +63,14 @@ describe("arranque y reanudación", () => {
 
   it("no inventa reanudación para los agentes que no la ofrecen", () => {
     expect(resumeCommandFor("codex", "", null)).toBe("codex");
+  });
+
+  it("Cursor retoma su chat por id, y cae a --continue si no hay ninguno", () => {
+    // El id no lo genera la aplicación: lo devuelve `cursor-agent create-chat`.
+    expect(resumeCommandFor("cursor", "", UUID)).toBe(`cursor-agent --resume ${UUID} -f`);
+    expect(resumeCommandFor("cursor", "", null)).toBe(cursor.resumeCommand);
+    expect(startCommandFor(cursor, UUID)).toBe(`cursor-agent --resume ${UUID} -f`);
+    // Sin reserva (por ejemplo, sin sesión iniciada) arranca un chat nuevo.
+    expect(startCommandFor(cursor, null)).toBe(cursor.command);
   });
 });

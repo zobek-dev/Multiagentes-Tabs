@@ -6,11 +6,10 @@ import {
   commandToStore,
   conversationsFor,
   detectAvailable,
-  newConversationId,
   profileById,
+  reserveConversation,
   resumeCommandFor,
   startCommandFor,
-  tracksConversation,
   type Profile,
 } from "./profiles";
 import { Session } from "./session";
@@ -199,10 +198,10 @@ export class AppState {
     if (!this.host) return;
     const command = commandToStore(profile, typed);
     const count = this.sessions.filter((s) => s.profileId === profile.id).length;
-    // Si el agente deja fijar el id de la conversación, se reserva aquí: así
-    // la pestaña sabe cuál retomar aunque haya varias sobre la misma carpeta.
-    const conversationId =
-      !command && tracksConversation(profile) ? newConversationId() : null;
+    // La conversación se reserva antes de arrancar: así la pestaña sabe cuál
+    // retomar aunque haya varias sobre la misma carpeta. Con Claude Code el id
+    // lo pone la aplicación; con Cursor hay que pedírselo al agente.
+    const conversationId = command ? null : await reserveConversation(profile, cwd);
 
     const session = this.track(
       new Session(
@@ -280,7 +279,7 @@ export class AppState {
   async startFreshConversation(session: Session): Promise<void> {
     const profile = profileById(session.profileId);
     if (!profile) return;
-    session.conversationId = tracksConversation(profile) ? newConversationId() : null;
+    session.conversationId = await reserveConversation(profile, session.cwd);
     session.launchWith(startCommandFor(profile, session.conversationId));
     this.persist(session);
     await session.restart();

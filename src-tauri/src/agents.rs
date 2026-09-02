@@ -21,6 +21,29 @@ pub fn conversations_for(profile_id: String, cwd: String) -> Vec<String> {
     }
 }
 
+/// Reserva una conversacion nueva pidiendosela al propio agente.
+///
+/// Cursor no deja fijar el id al arrancar, pero sabe crear un chat vacio y
+/// devolver el suyo; con eso la pestana queda atada a esa conversacion desde
+/// el primer momento, igual que Claude Code con su `--session-id`.
+#[tauri::command]
+pub fn create_conversation(profile_id: String, cwd: String) -> Option<String> {
+    if profile_id != "cursor" {
+        return None;
+    }
+    let binario = crate::pty::which("cursor-agent".into())?;
+    let salida = ejecutar_con_tope(Command::new(binario).arg("create-chat").current_dir(&cwd))?;
+    let id = salida.trim();
+    // La CLI imprime el identificador y nada mas; cualquier otra cosa
+    // (un aviso de sesion caducada, por ejemplo) se descarta.
+    if !id.is_empty() && id.len() <= 64 && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+    {
+        Some(id.to_string())
+    } else {
+        None
+    }
+}
+
 /* ---------- Claude Code ---------- */
 
 /// Nombre del directorio de proyecto que usa Claude Code para una ruta.
@@ -158,5 +181,14 @@ mod tests {
     #[test]
     fn un_agente_sin_soporte_no_devuelve_conversaciones() {
         assert!(conversations_for("aider".into(), "/tmp".into()).is_empty());
+        // Cursor guarda sus chats en la nube: no hay nada que listar por
+        // carpeta, el id se reserva al crear la pestaña.
+        assert!(conversations_for("cursor".into(), "/tmp".into()).is_empty());
+    }
+
+    #[test]
+    fn solo_cursor_reserva_conversacion_por_cli() {
+        assert_eq!(create_conversation("claude".into(), "/tmp".into()), None);
+        assert_eq!(create_conversation("shell".into(), "/tmp".into()), None);
     }
 }

@@ -50,9 +50,26 @@ fn lista_las_conversaciones_de_claude_de_la_mas_reciente_a_la_mas_antigua() {
 #[test]
 #[ignore]
 fn smoke_opencode() {
-    let cwd = std::env::var("OPENCODE_TEST_CWD").expect("define OPENCODE_TEST_CWD");
+    let Ok(cwd) = std::env::var("OPENCODE_TEST_CWD") else {
+        println!("sin OPENCODE_TEST_CWD: nada que comprobar");
+        return;
+    };
     let ids = conversations_for("opencode".into(), cwd.clone());
     println!("conversaciones de opencode en {cwd}: {ids:?}");
     assert!(!ids.is_empty(), "no se encontró ninguna sesión de opencode");
     assert!(ids.iter().all(|id| id.starts_with("ses_")));
+}
+
+/// Consulta la instalación real de Cursor. Se ejecuta a petición
+/// (`cargo test -- --ignored`) porque crea un chat vacío en la cuenta.
+#[test]
+#[ignore]
+fn smoke_cursor() {
+    use multiagentes_lib::agents::create_conversation;
+
+    let id = create_conversation("cursor".into(), std::env::temp_dir().to_string_lossy().into())
+        .expect("cursor-agent create-chat no devolvió ningún identificador");
+    println!("chat creado: {id}");
+    assert_eq!(id.len(), 36, "no parece un UUID: {id}");
+    assert_eq!(id.matches('-').count(), 4, "no parece un UUID: {id}");
 }

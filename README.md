@@ -1,8 +1,8 @@
 # Multiagentes
 
 Aplicación de escritorio para lanzar y manejar varias terminales a la vez,
-pensada para trabajar con agentes de línea de comandos (Claude Code, Codex,
-Gemini, Aider, opencode) sin llenar la pantalla de ventanas sueltas.
+pensada para trabajar con agentes de línea de comandos (Claude Code, Cursor,
+Codex, Gemini, Aider, opencode) sin llenar la pantalla de ventanas sueltas.
 
 Construida con **Tauri 2** (Rust), **Preact** y **xterm.js**. Cada sesión es un PTY real
 —no una emulación— así que el modo interactivo, los colores y las teclas de los
@@ -165,11 +165,12 @@ al resto de sus datos:
 | Perfil | Al abrir | Al restaurar | Cómo se sabe el id |
 | --- | --- | --- | --- |
 | Claude Code | `claude --session-id <uuid> --dangerously-skip-permissions` | `claude --resume <uuid> --dangerously-skip-permissions` | La aplicación lo reserva antes de arrancar |
+| Cursor | `cursor-agent --resume <uuid> -f` | `cursor-agent --resume <uuid> -f` | Se pide con `cursor-agent create-chat` |
 | opencode | `opencode` | `opencode --session <ses_…>` | Se consulta a `opencode session list` |
 | Gemini | `gemini` | `gemini --resume latest` | No hay id: retoma la última de la carpeta |
 | Codex, Aider | `codex` / `aider` | mismo comando, sin reanudar | — |
 
-Claude Code y opencode recuperan **exactamente** su conversación, incluso con
+Claude Code, Cursor y opencode recuperan **exactamente** su conversación, incluso con
 varias pestañas abiertas sobre la misma carpeta. Gemini sólo sabe retomar «la
 última conversación del proyecto», así que dos pestañas suyas en la misma
 carpeta se disputan el mismo hilo. Los agentes que no ofrecen ninguna
@@ -184,6 +185,11 @@ consultarlo:
   se lee ese directorio y se ordenan por fecha de modificación. Las
   transcripciones de menos de 128 bytes se descartan: son conversaciones que se
   abrieron y cerraron sin escribir nada, y no hay nada que retomar en ellas.
+- **Cursor** guarda sus chats en su servidor, no en disco, así que no hay nada
+  que listar por carpeta. A cambio sabe crear uno vacío y devolver su id
+  (`cursor-agent create-chat`): la pestaña queda atada a esa conversación desde
+  el primer momento. Si la reserva falla —sin sesión iniciada, por ejemplo—, la
+  pestaña arranca un chat nuevo en vez de quedarse sin abrir.
 - **opencode** no permite fijar el id de antemano, pero publica sus sesiones en
   `opencode session list --format json`, con la carpeta de cada una. Se filtra
   por la carpeta de la pestaña y se ordena por fecha. Se usa el formato JSON de

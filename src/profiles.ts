@@ -8,10 +8,16 @@ export interface Profile {
   /** Comando que se escribe en el shell al abrir la sesión. */
   command: string;
   /**
-   * Comando de arranque cuando el agente permite fijar el id de la
-   * conversación. `{id}` se sustituye por un UUID que genera la aplicación.
+   * Comando de arranque cuando la pestaña tiene una conversación reservada.
+   * `{id}` se sustituye por el identificador.
    */
   startTemplate?: string;
+  /**
+   * De dónde sale el id de una conversación nueva: `uuid` lo genera la propia
+   * aplicación y se lo impone al agente; `cli` se lo pide al agente, que es la
+   * única vía cuando los chats viven en su servidor y no en disco.
+   */
+  conversationSource?: "uuid" | "cli";
   /** Comando para retomar exactamente esa conversación por su id. */
   resumeTemplate?: string;
   /**
@@ -32,6 +38,7 @@ export const PROFILES: Profile[] = [
     label: "Claude Code",
     binary: "claude",
     command: "claude --dangerously-skip-permissions",
+    conversationSource: "uuid",
     startTemplate: "claude --session-id {id} --dangerously-skip-permissions",
     resumeTemplate: "claude --resume {id} --dangerously-skip-permissions",
     hint: "claude",
@@ -46,6 +53,21 @@ export const PROFILES: Profile[] = [
     hint: "codex",
     mark: "X",
     color: "#8b93a7",
+  },
+  {
+    id: "cursor",
+    label: "Cursor",
+    binary: "cursor-agent",
+    // `-f` deja al agente ejecutar comandos sin preguntar por cada uno, igual
+    // que `--dangerously-skip-permissions` en Claude Code.
+    command: "cursor-agent -f",
+    conversationSource: "cli",
+    startTemplate: "cursor-agent --resume {id} -f",
+    resumeTemplate: "cursor-agent --resume {id} -f",
+    resumeCommand: "cursor-agent --continue -f",
+    hint: "cursor-agent",
+    mark: "Cu",
+    color: "#7fb8e8",
   },
   {
     id: "gemini",
@@ -92,13 +114,30 @@ export function profileById(id: string): Profile | undefined {
   return PROFILES.find((profile) => profile.id === id);
 }
 
-/** True si el agente admite que la aplicación fije el id de la conversación. */
+/** True si la pestaña puede quedar atada a una conversación concreta. */
 export function tracksConversation(profile: Profile): boolean {
-  return Boolean(profile.startTemplate && profile.resumeTemplate);
+  return Boolean(profile.conversationSource && profile.startTemplate);
 }
 
-export function newConversationId(): string {
-  return crypto.randomUUID();
+/**
+ * Reserva la conversación de una pestaña nueva, antes de arrancar el agente.
+ *
+ * Devuelve `null` si el agente no lo admite o si la reserva falla —por
+ * ejemplo, sin sesión iniciada—: la pestaña arranca entonces con el comando
+ * normal del perfil, sin conversación anotada.
+ */
+export async function reserveConversation(
+  profile: Profile,
+  cwd: string,
+): Promise<string | null> {
+  if (!tracksConversation(profile)) return null;
+  if (profile.conversationSource === "uuid") return crypto.randomUUID();
+  try {
+    return await invoke<string | null>("create_conversation", { profileId: profile.id, cwd });
+  } catch (error) {
+    console.error(`no se pudo reservar la conversación de ${profile.label}`, error);
+    return null;
+  }
 }
 
 /** Comando para abrir una conversación nueva con un id ya reservado. */
