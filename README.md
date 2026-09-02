@@ -31,6 +31,59 @@ OPENCODE_TEST_CWD=/ruta/a/un/proyecto \
   cargo test --manifest-path src-tauri/Cargo.toml --test agents_lookup -- --ignored --nocapture
 ```
 
+## Instaladores
+
+### macOS
+
+```bash
+npm run dist
+```
+
+Deja `Multiagentes_<versión>_aarch64.dmg` en
+`src-tauri/target/release/bundle/dmg/` y el `.app` suelto en `bundle/macos/`.
+El binario ronda los 4 MB y el DMG los 2 MB.
+
+Se compila para la arquitectura del equipo. Para un DMG que funcione también en
+Macs Intel hace falta el objetivo universal:
+
+```bash
+rustup target add x86_64-apple-darwin aarch64-apple-darwin
+npm run tauri build -- --target universal-apple-darwin
+```
+
+### Windows
+
+No se puede construir desde macOS de forma fiable: el instalador necesita las
+herramientas de Visual Studio. Se genera en un equipo Windows con Node, Rust y
+las *Build Tools* de Visual Studio (carga «Desarrollo para el escritorio con
+C++»), con el mismo `npm run dist`, o —más cómodo— en integración continua.
+
+### Los dos a la vez, en integración continua
+
+`.github/workflows/build.yml` compila en máquinas reales de macOS y Windows y
+sube los instaladores como artefactos descargables. Se dispara al publicar una
+etiqueta `v*` o a mano desde la pestaña *Actions*:
+
+```bash
+git remote add origin git@github.com:<usuario>/<repo>.git
+git push -u origin main
+git tag v0.1.0 && git push --tags
+```
+
+### Aplicación sin firmar
+
+Ninguno de los dos instaladores va firmado, así que el sistema avisará al
+abrirlos:
+
+- **macOS**: «no se puede verificar el desarrollador». Se abre con clic derecho
+  sobre la aplicación → *Abrir*, o quitando la marca de cuarentena:
+  `xattr -dr com.apple.quarantine /Applications/Multiagentes.app`.
+- **Windows**: SmartScreen mostrará *Más información* → *Ejecutar de todas
+  formas*.
+
+Para distribuirla sin avisos hacen falta un certificado de desarrollador de
+Apple (y notarización) y un certificado de firma de código en Windows.
+
 ## Cómo funciona
 
 Al crear una sesión se lanza el **shell de inicio de sesión** del usuario

@@ -1,6 +1,8 @@
 //! Comprueba el mismo flujo que usa la aplicacion: abrir un PTY, lanzar el
 //! shell de inicio de sesion en un directorio dado, escribirle un comando y
 //! leer la salida.
+#![cfg(unix)] // Lanza `zsh -l` y `/bin/sh`: en Windows el flujo es otro.
+
 use std::io::{Read, Write};
 use std::time::{Duration, Instant};
 
