@@ -498,7 +498,9 @@ function cycle(delta: number): void {
   activate(sessions[next]);
 }
 
-window.addEventListener("resize", () => active?.fitNow());
+// Se reajustan todas, no sólo la visible: las de fondo comparten el mismo
+// hueco, y si quedan con el tamaño viejo el agente repinta mal al volver.
+window.addEventListener("resize", () => sessions.forEach((s) => s.fitNow()));
 window.addEventListener("beforeunload", () => {
   sessions.forEach((session) => void session.dispose());
 });
@@ -548,15 +550,13 @@ async function restoreSessions(): Promise<boolean> {
     if (record.active) toActivate = session;
   }
 
-  // La activa se muestra primero para poder medir: su tamaño se copia al
-  // resto, que arrancan ocultas y por tanto no pueden calcular el suyo.
   activate(toActivate ?? sessions[0]);
   render();
+  // Las pestañas de fondo ya ocupan su sitio aunque no se vean, así que cada
+  // una puede medirse sola antes de arrancar su proceso.
   await new Promise((resolve) => requestAnimationFrame(resolve));
-  const { cols, rows } = (toActivate ?? sessions[0]).dims;
 
   for (const session of sessions) {
-    if (session !== active) session.adoptSize(cols, rows);
     const record = stored.find((r) => r.id === session.key);
     if (record) session.restoreHistory(record.output);
     try {

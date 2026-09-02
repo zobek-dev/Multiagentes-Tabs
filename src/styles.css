@@ -223,7 +223,16 @@ button.primary {
   padding: 8px 4px 4px 10px;
 }
 
-.term-host.hidden { display: none; }
+/*
+ * Las pestañas de fondo se ocultan sin sacarlas del flujo: con `display:none`
+ * la terminal mide cero, y al volver a mostrarla xterm tiene que rehacer el
+ * ajuste de línea de todo el historial. Eso es lo que hacía que el scroll
+ * diera saltos en las conversaciones largas.
+ */
+.term-host.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
 
 .empty {
   flex: 1;

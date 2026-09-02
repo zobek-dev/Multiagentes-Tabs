@@ -56,7 +56,7 @@ export class Session {
   private fit: FitAddon;
   private decoder = new TextDecoder("utf-8");
   private unlisten: UnlistenFn | null = null;
-  private webglLoaded = false;
+  private webgl: WebglAddon | null = null;
   private generation = 0;
 
   onUpdate: () => void = () => {};
@@ -81,7 +81,15 @@ export class Session {
       lineHeight: 1.2,
       cursorBlink: true,
       allowProposedApi: true,
-      scrollback: 20000,
+      // 10 000 líneas cubren una conversación larga sin que cada cambio de
+      // tamaño tenga que rehacer el ajuste de línea de medio megabyte de
+      // salida. El historial completo vive en SQLite, no en el buffer.
+      scrollback: 10000,
+      smoothScrollDuration: 0,
+      // Alt + rueda salta de pantalla en pantalla: llegar al principio de una
+      // sesión larga a rueda normal es inviable.
+      fastScrollModifier: "alt",
+      scrollOnUserInput: true,
       theme: THEME,
     });
     this.fit = new FitAddon();
@@ -179,15 +187,7 @@ export class Session {
   show(): void {
     this.host.classList.remove("hidden");
     this.unread = false;
-    // WebGL sólo se puede montar con el canvas visible.
-    if (!this.webglLoaded) {
-      try {
-        this.term.loadAddon(new WebglAddon());
-        this.webglLoaded = true;
-      } catch {
-        /* sin aceleración: el renderer DOM sigue funcionando */
-      }
-    }
+    this.mountWebgl();
     requestAnimationFrame(() => {
       this.fitNow();
       this.term.focus();
@@ -196,6 +196,54 @@ export class Session {
 
   hide(): void {
     this.host.classList.add("hidden");
+    // El navegador sólo mantiene un puñado de contextos WebGL vivos; al
+    // superarlo descarta el más antiguo y esa terminal deja de repintarse.
+    // Con una sola terminal visible, basta con acelerar la activa.
+    this.unmountWebgl();
+  }
+
+  private mountWebgl(): void {
+    if (this.webgl) return;
+    try {
+      const addon = new WebglAddon();
+      // Si el sistema retira el contexto, se cae al renderer DOM en vez de
+      // quedarse con una terminal congelada.
+      addon.onContextLoss(() => this.unmountWebgl());
+      this.term.loadAddon(addon);
+      this.webgl = addon;
+    } catch {
+      /* sin aceleración: el renderer DOM sigue funcionando */
+    }
+  }
+
+  private unmountWebgl(): void {
+    this.webgl?.dispose();
+    this.webgl = null;
+  }
+
+  /** ¿La vista está pegada al final de la salida? */
+  get atBottom(): boolean {
+    const buffer = this.term.buffer.active;
+    return buffer.viewportY >= buffer.baseY;
+  }
+
+  /** Salta al final del historial. */
+  scrollToBottom(): void {
+    this.term.scrollToBottom();
+  }
+
+  /** Avisa cada vez que la vista se despega del final o vuelve a él. */
+  onScrollStateChange(listener: (atBottom: boolean) => void): void {
+    let previo = true;
+    const notificar = (): void => {
+      const ahora = this.atBottom;
+      if (ahora !== previo) {
+        previo = ahora;
+        listener(ahora);
+      }
+    };
+    this.term.onScroll(notificar);
+    this.term.onWriteParsed(notificar);
   }
 
   clear(): void {
@@ -209,15 +257,6 @@ export class Session {
   /** Dimensiones actuales, en celdas. */
   get dims(): { cols: number; rows: number } {
     return { cols: this.term.cols, rows: this.term.rows };
-  }
-
-  /**
-   * Fija el tamaño de una terminal que aún no se ha mostrado. Un host oculto
-   * mide cero, así que sin esto el PTY nacería con los 80x24 por defecto y el
-   * agente repintaría mal hasta que se activara la pestaña.
-   */
-  adoptSize(cols: number, rows: number): void {
-    if (cols > 0 && rows > 0) this.term.resize(cols, rows);
   }
 
   fitNow(): void {
@@ -239,6 +278,7 @@ export class Session {
 
   async dispose(): Promise<void> {
     await this.disposePty();
+    this.unmountWebgl();
     this.term.dispose();
     this.host.remove();
   }
