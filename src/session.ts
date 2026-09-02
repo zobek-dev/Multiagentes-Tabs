@@ -57,6 +57,7 @@ export class Session {
   private decoder = new TextDecoder("utf-8");
   private unlisten: UnlistenFn | null = null;
   private webgl: WebglAddon | null = null;
+  private observer: ResizeObserver | null = null;
   private generation = 0;
 
   onUpdate: () => void = () => {};
@@ -96,6 +97,11 @@ export class Session {
     this.term.loadAddon(this.fit);
     this.term.loadAddon(new WebLinksAddon());
     this.term.open(this.host);
+
+    // Defensa de fondo: cualquier cambio de tamaño del contenedor reajusta la
+    // terminal, venga de donde venga (ventana, panel lateral, layout tardío).
+    this.observer = new ResizeObserver(() => this.fitNow());
+    this.observer.observe(this.host);
 
     this.term.onData((data) => {
       if (this.ptyId) void invoke("pty_write", { id: this.ptyId, data });
@@ -278,6 +284,7 @@ export class Session {
 
   async dispose(): Promise<void> {
     await this.disposePty();
+    this.observer?.disconnect();
     this.unmountWebgl();
     this.term.dispose();
     this.host.remove();

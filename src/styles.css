@@ -16,7 +16,13 @@
 
 * { box-sizing: border-box; }
 
-html, body, #app {
+/*
+ * La cadena de alturas no puede romperse en ningún eslabón: si `#root` no
+ * mide el alto de la ventana, `#app` no tiene contra qué resolver su 100 %,
+ * `.terminals` se queda con la altura mínima y el PTY nace con un puñado de
+ * filas. El agente dibuja entonces en una franja y deja el resto en blanco.
+ */
+html, body, #root, #app {
   height: 100%;
   margin: 0;
 }
