@@ -70,7 +70,7 @@ function FileMenu({ state }: { state: AppState }) {
     })),
     {
       label: "Insertar ruta en la terminal",
-      run: () => state.active?.insertText(entry.path),
+      run: () => state.active?.session?.insertText(entry.path),
     },
     { label: "Copiar ruta", run: () => void navigator.clipboard.writeText(entry.path) },
     { label: "Mostrar en el Finder", run: () => void revealItemInDir(entry.path) },
@@ -172,7 +172,7 @@ export function FileTree({ state }: { state: AppState }) {
   const raizNombre = files.root?.split("/").filter(Boolean).pop() ?? "";
 
   return (
-    <aside class="files" style={{ width: `${files.width}px` }}>
+    <aside class={`files ${files.side}`} style={{ width: `${files.width}px` }}>
       <header class="files-head">
         <span class="files-title" title={files.root ?? ""}>
           {raizNombre || "Sin carpeta"}
@@ -194,6 +194,17 @@ export function FileTree({ state }: { state: AppState }) {
             onClick={() => files.toggleHidden()}
           >
             ·
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            title={files.side === "derecha" ? "Mover a la izquierda" : "Mover a la derecha"}
+            onClick={() => {
+              files.toggleSide();
+              requestAnimationFrame(() => state.fitAll());
+            }}
+          >
+            {files.side === "derecha" ? "‹" : "›"}
           </button>
         </div>
       </header>

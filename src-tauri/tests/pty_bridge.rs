@@ -20,7 +20,12 @@ fn el_shell_ejecuta_comandos_en_el_cwd_indicado() {
         })
         .expect("no se pudo abrir el pty");
 
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
+    // El shell del entorno puede no existir (los runners de Linux no traen
+    // zsh); se cae a `/bin/sh`, que está en cualquier Unix.
+    let shell = std::env::var("SHELL")
+        .ok()
+        .filter(|ruta| std::path::Path::new(ruta).exists())
+        .unwrap_or_else(|| "/bin/sh".into());
     let mut cmd = CommandBuilder::new(shell);
     cmd.arg("-l");
     cmd.cwd("/usr");

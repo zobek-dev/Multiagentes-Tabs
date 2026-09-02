@@ -23,10 +23,24 @@ jobs:
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             nombre: windows
+          # 22.04 y no una más reciente: el binario arrastra la glibc con la
+          # que se compila, y en la nueva no arrancaría en distribuciones algo
+          # más antiguas.
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            nombre: linux
 
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Dependencias del sistema (Linux)
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+            libxdo-dev libssl-dev build-essential curl wget file
 
       - uses: actions/setup-node@v4
         with:
@@ -58,6 +72,9 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*-setup.exe
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
           if-no-files-found: error
 
   # La aplicación avisa de versiones nuevas consultando la última versión
@@ -78,7 +95,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          archivos=$(find artefactos -type f \( -name '*.dmg' -o -name '*-setup.exe' -o -name '*.msi' \))
+          archivos=$(find artefactos -type f \( -name '*.dmg' -o -name '*-setup.exe' \
+            -o -name '*.msi' -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \))
           if [ -z "$archivos" ]; then
             echo "no hay instaladores que publicar" >&2
             exit 1

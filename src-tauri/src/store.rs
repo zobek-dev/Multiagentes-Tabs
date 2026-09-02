@@ -35,13 +35,7 @@ pub struct SessionRecord {
     pub active: bool,
 }
 
-#[derive(Debug, Serialize)]
-pub struct RestoredSession {
-    #[serde(flatten)]
-    pub record: SessionRecord,
-    /// Cola del historial en base64; el frontend la escribe en el xterm.
-    pub output: String,
-}
+
 
 enum Job {
     Append { session_id: String, data: Vec<u8> },
@@ -208,8 +202,12 @@ impl Store {
         Ok(())
     }
 
-    /// Devuelve las sesiones en orden junto con la cola de su historial.
-    pub fn load(&self, tail_bytes: i64) -> rusqlite::Result<Vec<RestoredSession>> {
+    /// Devuelve las sesiones en orden, sin su historial.
+    ///
+    /// El historial se pide aparte, cuando la pestaña se abre: cargar la cola
+    /// de todas al arrancar significaba decenas de megabytes en memoria y una
+    /// espera proporcional al número de pestañas.
+    pub fn load(&self) -> rusqlite::Result<Vec<SessionRecord>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, name, cwd, profile_id, command, conversation_id, position, active
@@ -230,15 +228,13 @@ impl Store {
             })?
             .collect::<rusqlite::Result<_>>()?;
 
-        let mut out = Vec::with_capacity(records.len());
-        for record in records {
-            let data = read_tail(&conn, &record.id, tail_bytes)?;
-            out.push(RestoredSession {
-                record,
-                output: B64.encode(&data),
-            });
-        }
-        Ok(out)
+        Ok(records)
+    }
+
+    /// Cola del historial de una sesión, en base64.
+    pub fn output(&self, id: &str, tail_bytes: i64) -> rusqlite::Result<String> {
+        let conn = self.conn.lock().unwrap();
+        Ok(B64.encode(read_tail(&conn, id, tail_bytes)?))
     }
 }
 
@@ -328,8 +324,14 @@ fn prune(tx: &rusqlite::Transaction<'_>, session_id: &str) -> rusqlite::Result<(
 const RESTORE_TAIL_BYTES: i64 = 64 * 1024;
 
 #[tauri::command]
-pub fn sessions_load(store: tauri::State<'_, Arc<Store>>) -> Result<Vec<RestoredSession>, String> {
-    store.load(RESTORE_TAIL_BYTES).map_err(|e| e.to_string())
+pub fn sessions_load(store: tauri::State<'_, Arc<Store>>) -> Result<Vec<SessionRecord>, String> {
+    store.load().map_err(|e| e.to_string())
+}
+
+/// Historial de una sesión concreta, al abrir su pestaña.
+#[tauri::command]
+pub fn session_output(store: tauri::State<'_, Arc<Store>>, id: String) -> Result<String, String> {
+    store.output(&id, RESTORE_TAIL_BYTES).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -394,12 +396,12 @@ mod tests {
         store.save(&record("b", 1)).unwrap();
         store.save(&record("a", 0)).unwrap();
 
-        let cargadas = store.load(4096).unwrap();
+        let cargadas = store.load().unwrap();
         assert_eq!(
-            cargadas.iter().map(|s| s.record.id.as_str()).collect::<Vec<_>>(),
+            cargadas.iter().map(|s| s.id.as_str()).collect::<Vec<_>>(),
             ["a", "b"]
         );
-        assert_eq!(cargadas[0].record.name, "Sesión a");
+        assert_eq!(cargadas[0].name, "Sesión a");
     }
 
     #[test]
@@ -410,8 +412,7 @@ mod tests {
         store.append_output("a", b"segunda linea con acentos: aeiou\n");
         store.flush();
 
-        let cargadas = store.load(4096).unwrap();
-        let salida = String::from_utf8(B64.decode(&cargadas[0].output).unwrap()).unwrap();
+        let salida = String::from_utf8(B64.decode(store.output("a", 4096).unwrap()).unwrap()).unwrap();
         assert!(salida.contains("primera linea"), "salida: {salida}");
         assert!(salida.ends_with("acentos: aeiou\n"), "salida: {salida}");
     }
@@ -446,7 +447,7 @@ mod tests {
         r.conversation_id = Some("3f2a1b0c-0000-4000-8000-000000000001".into());
         store.save(&r).unwrap();
 
-        let cargada = &store.load(0).unwrap()[0].record;
+        let cargada = &store.load().unwrap()[0];
         assert_eq!(cargada.conversation_id.as_deref(), Some("3f2a1b0c-0000-4000-8000-000000000001"));
     }
 
@@ -469,10 +470,10 @@ mod tests {
         }
 
         let store = Store::open(path).unwrap();
-        let cargadas = store.load(0).unwrap();
+        let cargadas = store.load().unwrap();
         assert_eq!(cargadas.len(), 1);
-        assert_eq!(cargadas[0].record.name, "Antigua");
-        assert_eq!(cargadas[0].record.conversation_id, None);
+        assert_eq!(cargadas[0].name, "Antigua");
+        assert_eq!(cargadas[0].conversation_id, None);
     }
 
     #[test]
@@ -499,11 +500,11 @@ mod tests {
         store.set_active("b").unwrap();
 
         let activas: Vec<String> = store
-            .load(0)
+            .load()
             .unwrap()
             .into_iter()
-            .filter(|s| s.record.active)
-            .map(|s| s.record.id)
+            .filter(|s| s.active)
+            .map(|s| s.id)
             .collect();
         assert_eq!(activas, ["b"]);
     }

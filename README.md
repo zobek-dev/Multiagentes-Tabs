@@ -13,6 +13,8 @@ agentes funcionan igual que en la terminal del sistema.
 - Node.js 20.19 o superior
 - Rust estable (1.77+)
 - macOS: Xcode Command Line Tools
+- Linux: `libwebkit2gtk-4.1-dev`, `libxdo-dev`, `libssl-dev`, `librsvg2-dev`,
+  `libappindicator3-dev`, `patchelf` y `build-essential`
 
 ## Uso
 
@@ -50,6 +52,14 @@ Macs Intel hace falta el objetivo universal:
 rustup target add x86_64-apple-darwin aarch64-apple-darwin
 npm run tauri build -- --target universal-apple-darwin
 ```
+
+### Linux
+
+Se construye en integración continua sobre Ubuntu 22.04 —y no una versión más
+reciente, porque el binario arrastra la glibc con la que se compila y en la
+nueva no arrancaría en distribuciones algo más antiguas—. Genera `.deb`, `.rpm`
+y `.AppImage`. En local, con las dependencias instaladas, basta el mismo
+`npm run dist`.
 
 ### Windows
 
@@ -127,10 +137,11 @@ sistema; los demás aparecen atenuados pero se pueden lanzar igualmente.
 
 ## Explorador de archivos
 
-Entre las sesiones y la terminal hay un panel con el árbol de la carpeta de la
-pestaña activa; cambia solo al cambiar de pestaña. Se muestra u oculta con
-`⌘B`, y su ancho se ajusta arrastrando el borde (doble clic para volver al
-ancho por defecto).
+Un panel con el árbol de la carpeta de la pestaña activa, que cambia solo al
+cambiar de pestaña. Aparece a la derecha de la terminal; el botón `‹` de su
+cabecera lo pasa al otro lado y ahí se queda. Se muestra u oculta con `⌘B`, y
+su ancho se ajusta arrastrando el borde (doble clic para volver al ancho por
+defecto).
 
 La carga es perezosa: sólo se lee el contenido de las carpetas que se abren,
 porque un proyecto con `node_modules` tiene cientos de miles de archivos.
@@ -159,6 +170,7 @@ el logotipo del fabricante— con el estado montado en la esquina:
 
 | Indicador | Significado |
 | --- | --- |
+| Gris | La pestaña existe pero no se ha abierto: no hay proceso detrás |
 | Naranja, latiendo | El agente está escribiendo ahora mismo |
 | Ámbar | Sonó la campana: terminó o pide permiso, y aún no lo has atendido |
 | Verde | Sin actividad, esperando tu turno |
@@ -211,8 +223,20 @@ Las sesiones viven en SQLite, en el directorio de datos de la aplicación
 en macOS). Se guardan el nombre, la carpeta, el perfil, el comando, el orden de
 las pestañas, cuál estaba activa y el historial de salida de cada terminal.
 
-Al abrir la aplicación se restauran todas las pestañas: primero se vuelca su
-historial en la terminal y después arranca el proceso.
+Al abrir la aplicación aparecen todas las pestañas, pero **sólo se abre de
+verdad la que estaba activa**. Las demás quedan dormidas —se ven en el panel
+con el punto de estado en gris— y se materializan al entrar en ellas: entonces
+se crea su terminal, se pide su historial y arranca su agente.
+
+Esa distinción es lo que permite tener muchas pestañas guardadas. Cada sesión
+viva son un xterm con su búfer, un PTY y un agente en marcha; restaurar diez de
+golpe eran diez agentes y varios cientos de megabytes antes de que nadie
+hubiera escrito nada. Con ocho pestañas guardadas, la aplicación abre una sola
+terminal y arranca en 87 MB.
+
+El historial tampoco se carga entero: `sessions_load` devuelve sólo los datos
+de cada pestaña, y `session_output` trae la cola de una en concreto cuando se
+abre.
 
 ### El contexto de la conversación
 

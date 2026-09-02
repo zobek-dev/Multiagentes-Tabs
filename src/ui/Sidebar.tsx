@@ -1,28 +1,29 @@
 import { useEffect, useRef } from "preact/hooks";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { profileById } from "../profiles";
-import type { AppState } from "../state";
-import type { Activity, Session } from "../session";
+import type { AppState, Tab } from "../state";
+import type { Activity } from "../session";
 
 const ESTADOS: Record<Activity, string> = {
   trabajando: "Trabajando",
   atencion: "Te espera",
   listo: "Sin actividad",
   terminada: "Proceso terminado",
+  dormida: "Sin abrir todavía",
 };
 
 /**
  * Distintivo del agente: monograma sobre su color, con el estado en la
  * esquina. Es una marca propia, no el logotipo del fabricante.
  */
-function AgentBadge({ session }: { session: Session }) {
-  const profile = profileById(session.profileId);
-  const activity = session.activity;
+function AgentBadge({ tab }: { tab: Tab }) {
+  const profile = profileById(tab.profileId);
+  const activity = tab.activity;
   return (
     <span
       class="agent-badge"
       style={{ "--agent": profile?.color ?? "var(--fg-dim)" }}
-      title={`${profile?.label ?? session.profileId} · ${ESTADOS[activity]}`}
+      title={`${profile?.label ?? tab.profileId} · ${ESTADOS[activity]}`}
     >
       <span class="agent-mark">{profile?.mark ?? "?"}</span>
       <span class={`state-dot ${activity}`} />
@@ -43,7 +44,7 @@ function shortenPath(path: string): string {
  * destruía a media escritura; ahora la reconciliación lo conserva, porque la
  * pestaña mantiene su clave entre renders.
  */
-function NameEditor({ state, session }: { state: AppState; session: Session }) {
+function NameEditor({ state, tab }: { state: AppState; tab: Tab }) {
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -57,15 +58,15 @@ function NameEditor({ state, session }: { state: AppState; session: Session }) {
       type="text"
       class="session-name-input"
       spellcheck={false}
-      value={session.name}
+      value={tab.name}
       onKeyDown={(event) => {
         // El campo vive dentro del panel: sin esto, ⌘W o los dígitos llegarían
         // a los atajos globales mientras se escribe el nombre.
         event.stopPropagation();
-        if (event.key === "Enter") state.commitRename(session, event.currentTarget.value);
+        if (event.key === "Enter") state.commitRename(tab, event.currentTarget.value);
         else if (event.key === "Escape") state.cancelRename();
       }}
-      onBlur={(event) => state.commitRename(session, event.currentTarget.value)}
+      onBlur={(event) => state.commitRename(tab, event.currentTarget.value)}
       onClick={(event) => event.stopPropagation()}
       onDblClick={(event) => event.stopPropagation()}
     />
@@ -80,34 +81,35 @@ export function Sidebar({ state }: { state: AppState }) {
       </header>
 
       <nav class="session-list">
-        {state.sessions.map((session, index) => {
+        {state.tabs.map((tab, index) => {
           const clases = ["session-item"];
-          if (session === state.active) clases.push("active");
-          if (session.exited) clases.push("exited");
-          else if (session.unread) clases.push("unread");
+          if (tab === state.active) clases.push("active");
+          if (tab.activity === "terminada") clases.push("exited");
+          else if (tab.unread) clases.push("unread");
+          if (!tab.session) clases.push("asleep");
 
           return (
             <button
-              key={session.key}
+              key={tab.id}
               type="button"
               class={clases.join(" ")}
               onClick={() => {
-                if (state.renaming !== session) state.activate(session);
+                if (state.renaming !== tab) void state.activate(tab);
               }}
-              onDblClick={() => state.startRename(session)}
+              onDblClick={() => state.startRename(tab)}
               onContextMenu={(event) => {
                 event.preventDefault();
-                state.openMenu(session, event.clientX, event.clientY);
+                state.openMenu(tab, event.clientX, event.clientY);
               }}
             >
-              <AgentBadge session={session} />
+              <AgentBadge tab={tab} />
               <span class="session-labels">
-                {state.renaming === session ? (
-                  <NameEditor state={state} session={session} />
+                {state.renaming === tab ? (
+                  <NameEditor state={state} tab={tab} />
                 ) : (
-                  <span class="session-name">{session.name}</span>
+                  <span class="session-name">{tab.name}</span>
                 )}
-                <span class="session-sub">{shortenPath(session.cwd)}</span>
+                <span class="session-sub">{shortenPath(tab.cwd)}</span>
               </span>
               <span class="session-index">{index < 9 ? `⌘${index + 1}` : ""}</span>
             </button>

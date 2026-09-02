@@ -42,6 +42,7 @@ pub fn run() {
             files::duplicate_entry,
             files::trash_entry,
             store::sessions_load,
+            store::session_output,
             store::session_save,
             store::session_delete,
             store::session_clear_output,

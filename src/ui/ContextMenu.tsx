@@ -20,29 +20,29 @@ export function ContextMenu({ state }: { state: AppState }) {
       left: Math.min(anchor.x, window.innerWidth - caja.width - 8),
       top: Math.min(anchor.y, window.innerHeight - caja.height - 8),
     });
-  }, [anchor?.session.key, anchor?.x, anchor?.y]);
+  }, [anchor?.tab.id, anchor?.x, anchor?.y]);
 
   if (!anchor) return null;
-  const { session } = anchor;
+  const { tab } = anchor;
 
   const acciones: Accion[] = [
-    { label: "Renombrar", run: () => state.startRename(session) },
-    { label: "Nombre por defecto", run: () => state.resetName(session) },
-    { label: "Duplicar sesión", run: () => void state.duplicate(session) },
+    { label: "Renombrar", run: () => state.startRename(tab) },
+    { label: "Nombre por defecto", run: () => state.resetName(tab) },
+    { label: "Duplicar sesión", run: () => void state.duplicate(tab) },
     {
-      label: session.exited ? "Reiniciar" : "Reiniciar (mata el proceso)",
-      run: () => void state.restartSession(session),
+      label: tab.session ? "Reiniciar (mata el proceso)" : "Abrir",
+      run: () => void state.restartTab(tab),
     },
-    ...(session.conversationId
+    ...(tab.conversationId
       ? [
           {
             label: "Empezar conversación nueva",
-            run: () => void state.startFreshConversation(session),
+            run: () => void state.startFreshConversation(tab),
           },
         ]
       : []),
-    { label: "Borrar historial guardado", run: () => void state.clearHistory(session) },
-    { label: "Cerrar", danger: true, run: () => void state.closeSession(session) },
+    { label: "Borrar historial guardado", run: () => void state.clearHistory(tab) },
+    { label: "Cerrar", danger: true, run: () => void state.closeTab(tab) },
   ];
 
   return (

@@ -12,16 +12,17 @@ import { useAppState } from "./hooks";
  * cómo borra la pantalla, se mide y repinta: una terminal a medio hacer.
  */
 function Loader({ state }: { state: AppState }) {
-  const session = state.active;
-  if (!session?.loading) return null;
-  const profile = profileById(session.profileId);
+  const tab = state.active;
+  const cargando = tab ? tab.opening || tab.session?.loading : false;
+  if (!tab || !cargando) return null;
+  const profile = profileById(tab.profileId);
   return (
     <div class="loader">
       <span class="agent-badge big" style={{ "--agent": profile?.color ?? "var(--fg-dim)" }}>
         <span class="agent-mark">{profile?.mark ?? "?"}</span>
       </span>
       <p class="loader-title">Iniciando {profile?.label ?? "la sesión"}…</p>
-      <p class="loader-sub">{session.cwd || "~"}</p>
+      <p class="loader-sub">{tab.cwd || "~"}</p>
       <span class="loader-bar" />
     </div>
   );
@@ -29,6 +30,7 @@ function Loader({ state }: { state: AppState }) {
 
 function Topbar({ state }: { state: AppState }) {
   const activa = state.active;
+  const viva = activa?.session ?? null;
   return (
     <header class="topbar" data-tauri-drag-region>
       <div class="topbar-info">
@@ -41,7 +43,7 @@ function Topbar({ state }: { state: AppState }) {
           class="ghost"
           title="Limpiar (⌘K)"
           disabled={!activa}
-          onClick={() => activa?.clear()}
+          onClick={() => viva?.clear()}
         >
           Limpiar
         </button>
@@ -50,7 +52,7 @@ function Topbar({ state }: { state: AppState }) {
           class="ghost"
           title="Reiniciar la sesión retomando la conversación"
           disabled={!activa}
-          onClick={() => activa && void state.restartSession(activa)}
+          onClick={() => activa && void state.restartTab(activa)}
         >
           Reiniciar
         </button>
@@ -59,7 +61,7 @@ function Topbar({ state }: { state: AppState }) {
           class="ghost danger"
           title="Cerrar (⌘W)"
           disabled={!activa}
-          onClick={() => activa && void state.closeSession(activa)}
+          onClick={() => activa && void state.closeTab(activa)}
         >
           Cerrar
         </button>
@@ -75,8 +77,13 @@ function Resizer({ state }: { state: AppState }) {
   useEffect(() => {
     const mover = (event: PointerEvent): void => {
       if (!arrastrando.current) return;
-      // El explorador empieza donde acaba el panel de sesiones (232 px).
-      state.files.setWidth(event.clientX - 232);
+      // A la derecha el ancho se mide desde el borde de la ventana; a la
+      // izquierda, desde donde acaba el panel de sesiones.
+      state.files.setWidth(
+        state.files.side === "derecha"
+          ? window.innerWidth - event.clientX
+          : event.clientX - 232,
+      );
       state.fitAll();
     };
     const soltar = (): void => {
@@ -144,7 +151,7 @@ export function App({ state }: { state: AppState }) {
         state.openLauncher();
       } else if (tecla === "w") {
         event.preventDefault();
-        if (state.active) void state.closeSession(state.active);
+        if (state.active) void state.closeTab(state.active);
       } else if (tecla === "b") {
         event.preventDefault();
         state.files.toggle();
@@ -152,13 +159,13 @@ export function App({ state }: { state: AppState }) {
         requestAnimationFrame(() => state.fitAll());
       } else if (tecla === "k") {
         event.preventDefault();
-        state.active?.clear();
+        state.active?.session?.clear();
       } else if (tecla === "r" && event.shiftKey) {
         event.preventDefault();
         if (state.active) state.startRename(state.active);
       } else if (event.key === "ArrowDown") {
         event.preventDefault();
-        state.active?.scrollToBottom();
+        state.active?.session?.scrollToBottom();
       } else if (event.key === "]" || (event.key === "Tab" && !event.shiftKey && event.ctrlKey)) {
         event.preventDefault();
         state.cycle(1);
@@ -166,10 +173,10 @@ export function App({ state }: { state: AppState }) {
         event.preventDefault();
         state.cycle(-1);
       } else if (/^[1-9]$/.test(event.key)) {
-        const destino = state.sessions[Number(event.key) - 1];
+        const destino = state.tabs[Number(event.key) - 1];
         if (destino) {
           event.preventDefault();
-          state.activate(destino);
+          void state.activate(destino);
         }
       }
     };
@@ -192,13 +199,13 @@ export function App({ state }: { state: AppState }) {
     };
   }, [state]);
 
-  const vacio = state.ready && !state.sessions.length;
+  const vacio = state.ready && !state.tabs.length;
 
   return (
     <>
       <div id="app">
         <Sidebar state={state} />
-        {state.files.open ? (
+        {state.files.open && state.files.side === "izquierda" ? (
           <>
             <FileTree state={state} />
             <Resizer state={state} />
@@ -215,7 +222,7 @@ export function App({ state }: { state: AppState }) {
               <button
                 type="button"
                 class="to-bottom"
-                onClick={() => state.active?.scrollToBottom()}
+                onClick={() => state.active?.session?.scrollToBottom()}
               >
                 Ir al final <span class="key">⌘↓</span>
               </button>
@@ -231,6 +238,12 @@ export function App({ state }: { state: AppState }) {
             </div>
           ) : null}
         </main>
+        {state.files.open && state.files.side === "derecha" ? (
+          <>
+            <Resizer state={state} />
+            <FileTree state={state} />
+          </>
+        ) : null}
       </div>
       {state.launcher ? <Launcher state={state} /> : null}
       <ContextMenu state={state} />

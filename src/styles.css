@@ -103,6 +103,8 @@ body {
 }
 
 .session-item.unread .session-name { color: var(--fg); font-weight: 600; }
+/* Sin abrir todavía: la pestaña existe, pero no hay proceso detrás. */
+.session-item.asleep .session-name { color: #6c7683; }
 .session-item.exited .session-name { color: #5f6875; }
 
 /* ---------- Distintivo del agente y su estado ---------- */
@@ -148,6 +150,7 @@ body {
 .state-dot.listo { background: var(--ok); }
 .state-dot.atencion { background: var(--warn); }
 .state-dot.terminada { background: transparent; box-shadow: inset 0 0 0 2px #4a525f; }
+.state-dot.dormida { background: #3a424e; }
 
 .state-dot.trabajando {
   background: var(--accent);
@@ -262,8 +265,10 @@ button.link.muted:hover { color: var(--fg); }
   flex-direction: column;
   min-height: 0;
   background: var(--bg-sidebar);
-  border-right: 1px solid var(--border);
 }
+
+.files.izquierda { border-right: 1px solid var(--border); }
+.files.derecha { border-left: 1px solid var(--border); }
 
 .files-head {
   height: 64px;

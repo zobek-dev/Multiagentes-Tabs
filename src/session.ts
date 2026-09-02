@@ -28,7 +28,7 @@ const THEME = {
  * idioma— sino de dos señales que da la propia terminal: si están entrando
  * datos ahora mismo, y la campana que los agentes disparan al pedir atención.
  */
-export type Activity = "trabajando" | "atencion" | "listo" | "terminada";
+export type Activity = "trabajando" | "atencion" | "listo" | "terminada" | "dormida";
 
 /** Silencio a partir del cual se considera que el agente dejó de trabajar. */
 const QUIETO_MS = 1200;
@@ -41,31 +41,24 @@ const QUIETO_MS = 1200;
 const ARRANQUE_MAX_MS = 20000;
 
 export interface SessionInit {
-  /** Id persistente; se genera si la sesión es nueva. */
-  id?: string;
-  name: string;
+  /** Id de la pestaña a la que pertenece; con él se guarda el historial. */
+  id: string;
   cwd: string;
-  profileId: string;
-  /** Comando del perfil; es lo que se persiste y lo que hereda un duplicado. */
-  command: string;
-  /** Comando realmente enviado al shell, si difiere (p. ej. al reanudar). */
-  launchCommand?: string;
-  /** Id de la conversación del agente, cuando el agente permite fijarlo. */
-  conversationId?: string | null;
+  /** Comando que se envía al shell al arrancar. */
+  launchCommand: string;
 }
 
-/** Una pestaña: su terminal en pantalla y el PTY que la alimenta. */
+/**
+ * La terminal viva de una pestaña: el xterm en pantalla y el PTY que lo
+ * alimenta. Los datos de la pestaña —nombre, agente, conversación— viven en
+ * `Tab`, que existe aunque la terminal no se haya abierto.
+ */
 export class Session {
-  /** Id estable entre reinicios: es la clave del registro en SQLite. */
+  /** Id de la pestaña: es también la clave del historial en SQLite. */
   readonly key: string;
   /** Id del PTY: lo elige el frontend para poder escuchar antes del arranque. */
   ptyId: string | null = null;
-  name: string;
   cwd: string;
-  profileId: string;
-  command: string;
-  /** Id de la conversación del agente; se persiste para poder retomarla. */
-  conversationId: string | null;
   private launchCommand: string;
   exited = false;
   unread = false;
@@ -89,13 +82,9 @@ export class Session {
   onUpdate: () => void = () => {};
 
   constructor(init: SessionInit, parent: HTMLElement) {
-    this.key = init.id ?? `k${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    this.name = init.name;
+    this.key = init.id;
     this.cwd = init.cwd;
-    this.profileId = init.profileId;
-    this.command = init.command;
-    this.launchCommand = init.launchCommand ?? init.command;
-    this.conversationId = init.conversationId ?? null;
+    this.launchCommand = init.launchCommand;
 
     this.host = document.createElement("div");
     this.host.className = "term-host hidden";

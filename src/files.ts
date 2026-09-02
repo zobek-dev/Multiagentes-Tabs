@@ -35,6 +35,9 @@ const ANCHO_MIN = 180;
 const ANCHO_MAX = 520;
 const ANCHO_KEY = "multiagentes.filesWidth";
 const ABIERTO_KEY = "multiagentes.filesOpen";
+const LADO_KEY = "multiagentes.filesSide";
+
+export type Lado = "izquierda" | "derecha";
 
 function leerNumero(clave: string, porDefecto: number): number {
   try {
@@ -56,6 +59,8 @@ export class FileBrowser {
   root: string | null = null;
   open: boolean;
   width: number;
+  /** A qué lado de la terminal se dibuja el panel. */
+  side: Lado;
   showHidden = false;
   selected: string | null = null;
   menu: FileMenuAnchor | null = null;
@@ -79,6 +84,13 @@ export class FileBrowser {
       }
     })();
     this.width = Math.min(ANCHO_MAX, Math.max(ANCHO_MIN, leerNumero(ANCHO_KEY, 240)));
+    this.side = (() => {
+      try {
+        return localStorage.getItem(LADO_KEY) === "izquierda" ? "izquierda" : "derecha";
+      } catch {
+        return "derecha";
+      }
+    })();
     void invoke<Editor[]>("available_editors")
       .then((editors) => {
         this.editors = editors;
@@ -105,6 +117,17 @@ export class FileBrowser {
       localStorage.setItem(ANCHO_KEY, String(this.width));
     } catch {
       /* idem */
+    }
+    this.emit();
+  }
+
+  /** Cambia el panel de lado; el ancho y lo demás se conservan. */
+  toggleSide(): void {
+    this.side = this.side === "derecha" ? "izquierda" : "derecha";
+    try {
+      localStorage.setItem(LADO_KEY, this.side);
+    } catch {
+      /* sin almacenamiento: volverá a la derecha en el próximo arranque */
     }
     this.emit();
   }
