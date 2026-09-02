@@ -13,6 +13,12 @@ import {
   type Profile,
 } from "./profiles";
 import { Session } from "./session";
+import {
+  INTERVALO_COMPROBACION_MS,
+  buscarActualizacion,
+  descartar,
+  type UpdateInfo,
+} from "./update";
 
 const LAST_CWD_KEY = "multiagentes.lastCwd";
 
@@ -60,6 +66,8 @@ export class AppState {
   /** Si la terminal visible está pegada al final de su salida. */
   atBottom = true;
   ready = false;
+  /** Versión publicada posterior a la instalada, si la hay. */
+  update: UpdateInfo | null = null;
 
   private host: HTMLElement | null = null;
   private listeners = new Set<() => void>();
@@ -97,6 +105,30 @@ export class AppState {
     const restored = await this.restore();
     this.ready = true;
     if (!restored) this.openLauncher();
+    this.emit();
+    this.watchForUpdates();
+  }
+
+  /**
+   * Mira si hay una versión nueva, sin estorbar el arranque: la primera
+   * consulta espera a que las sesiones estén en marcha.
+   */
+  private watchForUpdates(): void {
+    const mirar = async (): Promise<void> => {
+      const update = await buscarActualizacion();
+      if (update && update.version !== this.update?.version) {
+        this.update = update;
+        this.emit();
+      }
+    };
+    window.setTimeout(() => void mirar(), 8000);
+    window.setInterval(() => void mirar(), INTERVALO_COMPROBACION_MS);
+  }
+
+  /** Deja de avisar de esta versión hasta que salga otra. */
+  dismissUpdate(): void {
+    if (this.update) descartar(this.update.version);
+    this.update = null;
     this.emit();
   }
 

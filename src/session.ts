@@ -33,6 +33,13 @@ export type Activity = "trabajando" | "atencion" | "listo" | "terminada";
 /** Silencio a partir del cual se considera que el agente dejó de trabajar. */
 const QUIETO_MS = 1200;
 
+/**
+ * Tope para el arranque. Si el agente sigue escribiendo pasado este tiempo, se
+ * retira el indicador igualmente: mejor una terminal en movimiento que un
+ * cartel de «iniciando» que no se va nunca.
+ */
+const ARRANQUE_MAX_MS = 20000;
+
 export interface SessionInit {
   /** Id persistente; se genera si la sesión es nueva. */
   id?: string;
@@ -66,6 +73,9 @@ export class Session {
   private attention = false;
   private working = false;
   private quietTimer: number | null = null;
+  /** El agente todavía está pintando su interfaz por primera vez. */
+  private booting = false;
+  private bootTimer: number | null = null;
 
   readonly host: HTMLDivElement;
   private term: Terminal;
@@ -136,6 +146,8 @@ export class Session {
 
   /** Arranca el PTY y, si el perfil lo pide, escribe el comando inicial. */
   async start(): Promise<void> {
+    this.startBooting();
+    this.onUpdate();
     this.fitNow();
     const { cols, rows } = this.term;
     const id = `${this.key}-${++this.generation}`;
@@ -197,6 +209,7 @@ export class Session {
   markExited(code: number): void {
     this.exited = true;
     this.working = false;
+    this.finishBooting();
     if (this.quietTimer !== null) {
       window.clearTimeout(this.quietTimer);
       this.quietTimer = null;
@@ -258,11 +271,37 @@ export class Session {
     this.webgl = null;
   }
 
+  /**
+   * Mientras dura, la terminal se tapa: durante el arranque el agente borra la
+   * pantalla, mide el terminal y repinta varias veces, y ese baile es lo que
+   * se veía como una terminal a medio hacer.
+   */
+  get loading(): boolean {
+    return this.booting;
+  }
+
   /** Estado que muestra la pestaña en el panel lateral. */
   get activity(): Activity {
     if (this.exited) return "terminada";
     if (this.working) return "trabajando";
     return this.attention ? "atencion" : "listo";
+  }
+
+  private startBooting(): void {
+    this.booting = true;
+    if (this.bootTimer !== null) window.clearTimeout(this.bootTimer);
+    this.bootTimer = window.setTimeout(() => this.finishBooting(), ARRANQUE_MAX_MS);
+  }
+
+  private finishBooting(): void {
+    if (!this.booting) return;
+    this.booting = false;
+    if (this.bootTimer !== null) {
+      window.clearTimeout(this.bootTimer);
+      this.bootTimer = null;
+    }
+    this.fitNow();
+    this.onUpdate();
   }
 
   /** Marca actividad y programa la vuelta a la calma tras el silencio. */
@@ -277,6 +316,8 @@ export class Session {
     this.quietTimer = window.setTimeout(() => {
       this.quietTimer = null;
       this.working = false;
+      // La primera calma es la señal de que el agente terminó de pintarse.
+      this.finishBooting();
       this.onUpdate();
     }, QUIETO_MS);
   }
@@ -338,6 +379,7 @@ export class Session {
 
   async dispose(): Promise<void> {
     if (this.quietTimer !== null) window.clearTimeout(this.quietTimer);
+    if (this.bootTimer !== null) window.clearTimeout(this.bootTimer);
     await this.disposePty();
     this.observer?.disconnect();
     this.unmountWebgl();

@@ -194,7 +194,40 @@ body {
 .sidebar-foot {
   padding: 8px;
   border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
+
+/* Aviso de versión nueva: informa, no interrumpe. */
+.update-note {
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.update-title { font-size: 11.5px; color: var(--fg); }
+
+.update-actions { display: flex; gap: 12px; }
+
+button.link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+button.link.muted { color: var(--fg-dim); text-decoration: none; }
+button.link.muted:hover { color: var(--fg); }
 
 .new-btn {
   width: 100%;
@@ -280,6 +313,72 @@ button.primary {
 }
 
 .term-mount { position: absolute; inset: 0; }
+
+/* ---------- Indicador de arranque ---------- */
+
+.loader {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.agent-badge.big {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.agent-badge.big .agent-mark { font-size: 20px; }
+
+.loader-title {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--fg);
+}
+
+.loader-sub {
+  margin: 0;
+  font-size: 11.5px;
+  color: #5f6875;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Barra indeterminada: el arranque no tiene progreso que medir. */
+.loader-bar {
+  margin-top: 18px;
+  width: 168px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+  position: relative;
+}
+
+.loader-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: recorrido 1.15s ease-in-out infinite;
+}
+
+@keyframes recorrido {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader-bar::after { animation: none; width: 100%; opacity: 0.5; }
+}
 
 /* Atajo visible cuando la vista se despega del final de la salida. */
 .to-bottom {

@@ -1,7 +1,8 @@
 name: Instaladores
 
 # Construye los instaladores de macOS y Windows. Se ejecuta a mano desde la
-# pestaña Actions, o automáticamente al publicar una etiqueta `v*`.
+# pestaña Actions, o automáticamente al publicar una etiqueta `v*`, que además
+# publica una versión con los instaladores adjuntos.
 on:
   workflow_dispatch:
   push:
@@ -58,3 +59,32 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*-setup.exe
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
           if-no-files-found: error
+
+  # La aplicación avisa de versiones nuevas consultando la última versión
+  # publicada, así que etiquetar tiene que dejar una con sus instaladores.
+  publicar:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefactos
+
+      - name: Publicar la versión
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          archivos=$(find artefactos -type f \( -name '*.dmg' -o -name '*-setup.exe' -o -name '*.msi' \))
+          if [ -z "$archivos" ]; then
+            echo "no hay instaladores que publicar" >&2
+            exit 1
+          fi
+          echo "$archivos"
+          gh release create "$GITHUB_REF_NAME" $archivos \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Multiagentes $GITHUB_REF_NAME" \
+            --generate-notes

@@ -1,9 +1,30 @@
 import { useEffect, useRef } from "preact/hooks";
+import { profileById } from "../profiles";
 import type { AppState } from "../state";
 import { ContextMenu } from "./ContextMenu";
 import { Launcher } from "./Launcher";
 import { Sidebar } from "./Sidebar";
 import { useAppState } from "./hooks";
+
+/**
+ * Tapa la terminal mientras el agente se pinta por primera vez. Sin esto se ve
+ * cómo borra la pantalla, se mide y repinta: una terminal a medio hacer.
+ */
+function Loader({ state }: { state: AppState }) {
+  const session = state.active;
+  if (!session?.loading) return null;
+  const profile = profileById(session.profileId);
+  return (
+    <div class="loader">
+      <span class="agent-badge big" style={{ "--agent": profile?.color ?? "var(--fg-dim)" }}>
+        <span class="agent-mark">{profile?.mark ?? "?"}</span>
+      </span>
+      <p class="loader-title">Iniciando {profile?.label ?? "la sesión"}…</p>
+      <p class="loader-sub">{session.cwd || "~"}</p>
+      <span class="loader-bar" />
+    </div>
+  );
+}
 
 function Topbar({ state }: { state: AppState }) {
   const activa = state.active;
@@ -137,6 +158,7 @@ export function App({ state }: { state: AppState }) {
             {/* Territorio de xterm: Preact no pone hijos aquí dentro, así que
                 nunca compite con los nodos que monta la clase Session. */}
             <div class="term-mount" ref={terminales} />
+            <Loader state={state} />
             {!state.atBottom && state.active ? (
               <button
                 type="button"

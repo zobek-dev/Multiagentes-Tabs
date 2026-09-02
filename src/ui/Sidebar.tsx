@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { profileById } from "../profiles";
 import type { AppState } from "../state";
 import type { Activity, Session } from "../session";
@@ -115,6 +116,23 @@ export function Sidebar({ state }: { state: AppState }) {
       </nav>
 
       <footer class="sidebar-foot">
+        {state.update ? (
+          <div class="update-note">
+            <span class="update-title">Versión {state.update.version} disponible</span>
+            <div class="update-actions">
+              <button
+                type="button"
+                class="link"
+                onClick={() => void openUrl(state.update!.url)}
+              >
+                Descargar
+              </button>
+              <button type="button" class="link muted" onClick={() => state.dismissUpdate()}>
+                Ahora no
+              </button>
+            </div>
+          </div>
+        ) : null}
         <button type="button" class="new-btn" onClick={() => state.openLauncher()}>
           <span>+</span> Nueva sesión
         </button>

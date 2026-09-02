@@ -125,6 +125,12 @@ el logotipo del fabricante— con el estado montado en la esquina:
 | Verde | Sin actividad, esperando tu turno |
 | Gris hueco | El proceso terminó |
 
+Mientras el agente se pinta por primera vez, la terminal queda tapada por un
+indicador de carga: durante el arranque borra la pantalla, se mide y repinta
+varias veces, y ese baile es lo que se veía como una terminal a medio hacer. Se
+retira en cuanto la salida se calma, o a los veinte segundos si el agente no
+para de escribir.
+
 El estado no se deduce leyendo la salida del agente: ese texto cambia con cada
 versión y con el idioma. Se apoya en dos señales que da la propia terminal,
 si están entrando datos en este instante y la campana (`BEL`) que los agentes
@@ -141,6 +147,23 @@ El renombrado ocurre en línea, dentro de la propia pestaña: `Enter` confirma,
 `Escape` cancela y hacer clic fuera guarda. Mientras hay una edición abierta el
 panel lateral deja de redibujarse, porque la salida de los agentes lo refresca
 sin parar y eso robaría el foco del campo.
+
+## Avisos de versión nueva
+
+La aplicación consulta la última versión publicada en GitHub —al arrancar, con
+ocho segundos de margen para no estorbar, y luego cada seis horas— y si hay una
+posterior a la instalada muestra un aviso discreto en el panel lateral, con un
+enlace a la página de descarga y un «Ahora no» que silencia esa versión
+concreta hasta que salga otra.
+
+Es un aviso, no una actualización automática: descargas e instalas tú. La
+actualización con un clic (`tauri-plugin-updater`) exige firmar cada entrega
+con una clave propia y, mientras la aplicación no esté firmada también para el
+sistema operativo, reemplazarse a sí misma choca con Gatekeeper. Es la fase 0
+del plan de producto.
+
+Etiquetar una versión (`v*`) publica una *release* con los instaladores
+adjuntos, que es justamente lo que la aplicación consulta.
 
 ## Persistencia
 

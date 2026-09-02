@@ -1,7 +1,7 @@
 {
   "name": "multiagentes",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,11 +10,13 @@
     "tauri": "tauri",
     "start": "tauri dev",
     "dist": "tauri build",
-    "test": "vitest run && cargo test --manifest-path src-tauri/Cargo.toml"
+    "test": "vitest run && cargo test --manifest-path src-tauri/Cargo.toml",
+    "predist": "for v in /Volumes/dmg.*; do [ -d \"$v\" ] && hdiutil detach \"$v\" -force >/dev/null 2>&1; done; true"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-dialog": "^2.0.1",
+    "@tauri-apps/plugin-opener": "^2.5.5",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/addon-webgl": "^0.18.0",
