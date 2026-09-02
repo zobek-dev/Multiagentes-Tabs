@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multiagentes</title>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar">
+        <header class="sidebar-head" data-tauri-drag-region>
+          <span class="brand">Multiagentes</span>
+        </header>
+        <nav id="session-list" class="session-list"></nav>
+        <footer class="sidebar-foot">
+          <button id="new-session" class="new-btn">
+            <span>+</span> Nueva sesión
+          </button>
+        </footer>
+      </aside>
+
+      <main id="main">
+        <header id="topbar" data-tauri-drag-region>
+          <div class="topbar-info">
+            <span id="active-title" class="active-title">Sin sesiones</span>
+            <span id="active-cwd" class="active-cwd"></span>
+          </div>
+          <div class="topbar-actions">
+            <button id="btn-clear" class="ghost" title="Limpiar (⌘K)">Limpiar</button>
+            <button id="btn-restart" class="ghost" title="Reiniciar sesión">Reiniciar</button>
+            <button id="btn-close" class="ghost danger" title="Cerrar (⌘W)">Cerrar</button>
+          </div>
+        </header>
+        <section id="terminals" class="terminals"></section>
+        <div id="empty" class="empty">
+          <p class="empty-title">No hay sesiones abiertas</p>
+          <p class="empty-hint">Pulsa <kbd>⌘</kbd><kbd>T</kbd> o «Nueva sesión» para lanzar un agente.</p>
+        </div>
+      </main>
+    </div>
+
+    <div id="launcher" class="launcher hidden">
+      <div class="launcher-card">
+        <h2>Nueva sesión</h2>
+        <label class="field">
+          <span>Agente</span>
+          <div id="profile-grid" class="profile-grid"></div>
+        </label>
+        <label class="field">
+          <span>Directorio de trabajo</span>
+          <div class="cwd-row">
+            <input id="cwd-input" type="text" spellcheck="false" placeholder="~" />
+            <button id="pick-cwd" class="ghost">Elegir…</button>
+          </div>
+        </label>
+        <label class="field">
+          <span>Comando inicial</span>
+          <input id="cmd-input" type="text" spellcheck="false" />
+        </label>
+        <div class="launcher-actions">
+          <button id="launch-cancel" class="ghost">Cancelar</button>
+          <button id="launch-go" class="primary">Lanzar</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

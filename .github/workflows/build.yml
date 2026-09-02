@@ -1,0 +1,60 @@
+name: Instaladores
+
+# Construye los instaladores de macOS y Windows. Se ejecuta a mano desde la
+# pestaña Actions, o automáticamente al publicar una etiqueta `v*`.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            nombre: macos-apple-silicon
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            nombre: macos-intel
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            nombre: windows
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.target }}
+
+      - run: npm ci
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Construir instalador
+        run: npm run tauri build -- --target ${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: multiagentes-${{ matrix.nombre }}
+          # macOS deja el .dmg en bundle/dmg y Windows el .exe en bundle/nsis.
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*-setup.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+          if-no-files-found: error
