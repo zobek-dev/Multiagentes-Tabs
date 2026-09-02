@@ -12,6 +12,7 @@ import {
   startCommandFor,
   type Profile,
 } from "./profiles";
+import { FileBrowser } from "./files";
 import { Session } from "./session";
 import {
   INTERVALO_COMPROBACION_MS,
@@ -68,6 +69,8 @@ export class AppState {
   ready = false;
   /** Versión publicada posterior a la instalada, si la hay. */
   update: UpdateInfo | null = null;
+  /** El explorador de archivos del panel central. */
+  readonly files = new FileBrowser(() => this.emit());
 
   private host: HTMLElement | null = null;
   private listeners = new Set<() => void>();
@@ -284,6 +287,9 @@ export class AppState {
     }
     this.active?.hide();
     this.active = session;
+    // El explorador sigue a la pestaña: enseña el proyecto en el que se está
+    // trabajando, sin tener que elegir carpeta por separado.
+    this.files.setRoot(session?.cwd ?? null);
     if (session) {
       session.show();
       this.atBottom = session.atBottom;

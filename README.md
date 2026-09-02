@@ -70,6 +70,17 @@ git push -u origin main
 git tag v0.1.0 && git push --tags
 ```
 
+### Un fallo cosmético del DMG en macOS
+
+`bundle_dmg.sh` termina con un error después de haber creado el DMG:
+`hdiutil does not support internet-enable`, una opción retirada en macOS 10.15.
+El archivo queda bien construido en `bundle/dmg/`, aunque `npm run dist`
+devuelva error. En integración continua no ocurre.
+
+Un empaquetado interrumpido deja además montados los volúmenes `dmg.*` y
+`Multiagentes`, y con ellos montados el siguiente intento falla de verdad;
+`npm run dist` los desmonta antes de empezar (`tools/desmontar-dmg.sh`).
+
 ### Aplicación sin firmar
 
 Ninguno de los dos instaladores va firmado, así que el sistema avisará al
@@ -104,6 +115,7 @@ sistema; los demás aparecen atenuados pero se pueden lanzar igualmente.
 | --- | --- |
 | `⌘T` | Nueva sesión |
 | `⌘W` | Cerrar la sesión activa |
+| `⌘B` | Mostrar u ocultar el explorador |
 | `⌘K` | Limpiar la terminal |
 | `⌘↓` | Saltar al final de la salida |
 | `Alt` + rueda | Desplazar de pantalla en pantalla |
@@ -112,6 +124,33 @@ sistema; los demás aparecen atenuados pero se pueden lanzar igualmente.
 | `⇧⌘R` | Renombrar la sesión activa |
 | Doble clic en la lista | Renombrar la sesión |
 | Clic derecho en la lista | Menú de la sesión |
+
+## Explorador de archivos
+
+Entre las sesiones y la terminal hay un panel con el árbol de la carpeta de la
+pestaña activa; cambia solo al cambiar de pestaña. Se muestra u oculta con
+`⌘B`, y su ancho se ajusta arrastrando el borde (doble clic para volver al
+ancho por defecto).
+
+La carga es perezosa: sólo se lee el contenido de las carpetas que se abren,
+porque un proyecto con `node_modules` tiene cientos de miles de archivos.
+Cada carpeta devuelve como mucho 2000 entradas y avisa si hay más.
+
+El clic derecho ofrece, por grupos: abrir con los editores instalados (Cursor,
+VS Code, Windsurf, Sublime Text o Zed, los que estén en el PATH), insertar la
+ruta en la terminal activa —útil para dar contexto al agente sin copiar y
+pegar—, copiar la ruta y mostrar en el Finder; crear archivo o carpeta;
+renombrar, duplicar y mover a la papelera.
+
+Nada se borra de forma definitiva: «Mover a la papelera» usa la papelera del
+sistema y pide confirmación. Sólo se lanzan los editores de una lista fija, de
+modo que el nombre que llega desde la interfaz no puede convertirse en la
+ejecución de un binario cualquiera.
+
+Los iconos son un subconjunto de **Material Icon Theme** (MIT, Philipp Kief).
+`npm run icons` regenera `src/ui/icons.generated.ts` con los 118 que el
+explorador usa; el tema completo son 1251 y no tiene sentido llevárselos todos
+al paquete.
 
 ## Estado de cada pestaña
 
@@ -267,12 +306,15 @@ src/                  frontend (TypeScript + Preact)
   session.ts          una pestaña: terminal xterm + PTY asociado
   profiles.ts         perfiles de agente, comandos y reanudación
   assign.ts           reparto de conversaciones entre pestañas
-  ui/                 componentes: App, Sidebar, Launcher, ContextMenu
+  files.ts            estado del explorador de archivos
+  update.ts           aviso de versión nueva
+  ui/                 componentes: App, Sidebar, FileTree, Launcher, menús
   *.test.ts           pruebas de comandos y de reparto
 src-tauri/
   src/pty.rs          puente PTY: spawn, escritura, resize, kill
   src/store.rs        persistencia SQLite de sesiones e historial
   src/agents.rs       consulta de conversaciones existentes por agente
+  src/files.rs        listado y operaciones de archivos
   src/lib.rs          arranque de Tauri y registro de comandos
 tools/make-icon.mjs   genera el PNG fuente del icono (`npx tauri icon`)
 ```

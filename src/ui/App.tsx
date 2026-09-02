@@ -2,6 +2,7 @@ import { useEffect, useRef } from "preact/hooks";
 import { profileById } from "../profiles";
 import type { AppState } from "../state";
 import { ContextMenu } from "./ContextMenu";
+import { FileTree } from "./FileTree";
 import { Launcher } from "./Launcher";
 import { Sidebar } from "./Sidebar";
 import { useAppState } from "./hooks";
@@ -67,6 +68,43 @@ function Topbar({ state }: { state: AppState }) {
   );
 }
 
+/** Divisor que ajusta el ancho del explorador arrastrando. */
+function Resizer({ state }: { state: AppState }) {
+  const arrastrando = useRef(false);
+
+  useEffect(() => {
+    const mover = (event: PointerEvent): void => {
+      if (!arrastrando.current) return;
+      // El explorador empieza donde acaba el panel de sesiones (232 px).
+      state.files.setWidth(event.clientX - 232);
+      state.fitAll();
+    };
+    const soltar = (): void => {
+      arrastrando.current = false;
+      document.body.classList.remove("resizing");
+    };
+    window.addEventListener("pointermove", mover);
+    window.addEventListener("pointerup", soltar);
+    return () => {
+      window.removeEventListener("pointermove", mover);
+      window.removeEventListener("pointerup", soltar);
+    };
+  }, [state]);
+
+  return (
+    <div
+      class="resizer"
+      role="separator"
+      aria-orientation="vertical"
+      onPointerDown={() => {
+        arrastrando.current = true;
+        document.body.classList.add("resizing");
+      }}
+      onDblClick={() => state.files.setWidth(240)}
+    />
+  );
+}
+
 export function App({ state }: { state: AppState }) {
   useAppState(state);
   const terminales = useRef<HTMLDivElement>(null);
@@ -107,6 +145,11 @@ export function App({ state }: { state: AppState }) {
       } else if (tecla === "w") {
         event.preventDefault();
         if (state.active) void state.closeSession(state.active);
+      } else if (tecla === "b") {
+        event.preventDefault();
+        state.files.toggle();
+        // El área de terminal cambia de ancho: hay que rehacer las medidas.
+        requestAnimationFrame(() => state.fitAll());
       } else if (tecla === "k") {
         event.preventDefault();
         state.active?.clear();
@@ -137,7 +180,10 @@ export function App({ state }: { state: AppState }) {
 
   // Un clic en cualquier parte cierra el menú contextual abierto.
   useEffect(() => {
-    const cerrar = (): void => state.closeMenu();
+    const cerrar = (): void => {
+      state.closeMenu();
+      state.files.closeMenu();
+    };
     window.addEventListener("click", cerrar);
     window.addEventListener("blur", cerrar);
     return () => {
@@ -152,6 +198,12 @@ export function App({ state }: { state: AppState }) {
     <>
       <div id="app">
         <Sidebar state={state} />
+        {state.files.open ? (
+          <>
+            <FileTree state={state} />
+            <Resizer state={state} />
+          </>
+        ) : null}
         <main class="main">
           <Topbar state={state} />
           <section class="terminals">

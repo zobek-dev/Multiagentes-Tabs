@@ -351,6 +351,15 @@ export class Session {
     this.term.clear();
   }
 
+  /** Escribe texto en la terminal como si lo hubiera tecleado el usuario. */
+  insertText(text: string): void {
+    if (!this.ptyId) return;
+    // Una ruta con espacios se entrecomilla, o el shell la parte en dos.
+    const data = /[\s'"\\]/.test(text) ? `'${text.replace(/'/g, "'\\''")}' ` : `${text} `;
+    void invoke("pty_write", { id: this.ptyId, data });
+    this.focus();
+  }
+
   focus(): void {
     this.term.focus();
   }

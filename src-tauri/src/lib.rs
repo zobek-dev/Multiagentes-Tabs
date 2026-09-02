@@ -1,4 +1,5 @@
 pub mod agents;
+mod files;
 mod pty;
 mod store;
 
@@ -33,6 +34,13 @@ pub fn run() {
             pty::which,
             agents::conversations_for,
             agents::create_conversation,
+            files::list_dir,
+            files::available_editors,
+            files::open_in_editor,
+            files::create_entry,
+            files::rename_entry,
+            files::duplicate_entry,
+            files::trash_entry,
             store::sessions_load,
             store::session_save,
             store::session_delete,
