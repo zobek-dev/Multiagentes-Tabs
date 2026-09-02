@@ -4,7 +4,7 @@ Aplicación de escritorio para lanzar y manejar varias terminales a la vez,
 pensada para trabajar con agentes de línea de comandos (Claude Code, Codex,
 Gemini, Aider, opencode) sin llenar la pantalla de ventanas sueltas.
 
-Construida con **Tauri 2** (Rust) + **xterm.js**. Cada sesión es un PTY real
+Construida con **Tauri 2** (Rust), **Preact** y **xterm.js**. Cada sesión es un PTY real
 —no una emulación— así que el modo interactivo, los colores y las teclas de los
 agentes funcionan igual que en la terminal del sistema.
 
@@ -105,6 +105,8 @@ sistema; los demás aparecen atenuados pero se pueden lanzar igualmente.
 | `⌘T` | Nueva sesión |
 | `⌘W` | Cerrar la sesión activa |
 | `⌘K` | Limpiar la terminal |
+| `⌘↓` | Saltar al final de la salida |
+| `Alt` + rueda | Desplazar de pantalla en pantalla |
 | `⌘1` … `⌘9` | Ir a la sesión n |
 | `⌘[` / `⌘]` | Sesión anterior / siguiente |
 | `⇧⌘R` | Renombrar la sesión activa |
@@ -213,11 +215,13 @@ Detalles del almacén (`src-tauri/src/store.rs`):
 ## Estructura
 
 ```
-src/                  frontend (TypeScript, sin framework)
-  main.ts             estado de la aplicación, panel lateral, atajos
+src/                  frontend (TypeScript + Preact)
+  main.tsx            arranque
+  state.ts            todo el estado y las acciones, sin tocar el DOM
   session.ts          una pestaña: terminal xterm + PTY asociado
   profiles.ts         perfiles de agente, comandos y reanudación
   assign.ts           reparto de conversaciones entre pestañas
+  ui/                 componentes: App, Sidebar, Launcher, ContextMenu
   *.test.ts           pruebas de comandos y de reparto
 src-tauri/
   src/pty.rs          puente PTY: spawn, escritura, resize, kill
@@ -244,6 +248,22 @@ Basta con una entrada nueva en `PROFILES` (`src/profiles.ts`):
 }
 ```
 
+## Por qué Preact y no una interfaz a mano
+
+El panel lateral se redibuja cada vez que un agente escribe algo. Con nodos
+creados a mano, eso destruía el campo de renombrado a media escritura y hubo
+que congelar la lista mientras hubiera una edición abierta. Con reconciliación
+por clave el problema desaparece de raíz, y lo mismo valdrá para el resto de
+elementos con estado propio: scroll, selección, un menú abierto.
+
+Las terminales quedan **fuera** del árbol de Preact, montadas en
+`div.term-mount` por la clase `Session`: xterm gestiona su propio nodo y
+guarda el búfer, así que volver a montarlo perdería el historial. Preact nunca
+pone hijos dentro de ese contenedor.
+
+Preact en lugar de React por tamaño: la misma API en unos 7 KB comprimidos
+sobre el paquete final, frente a los ~45 KB de React.
+
 ## Detalles de implementación
 
 - La salida del PTY viaja en base64 y se decodifica en el renderer con un
@@ -254,3 +274,10 @@ Basta con una entrada nueva en `PROFILES` (`src/profiles.ts`):
   se perderían.
 - Al cerrar la ventana se matan todos los procesos hijos, para no dejar agentes
   huérfanos corriendo en segundo plano.
+- Las pestañas de fondo se ocultan con `visibility`, no con `display:none`:
+  conservando su tamaño, xterm no tiene que rehacer el ajuste de línea de todo
+  el historial al volver a mostrarlas. Ésa era la causa de que el scroll diera
+  saltos en las sesiones largas.
+- El complemento WebGL lo usa sólo la pestaña visible. El navegador mantiene
+  vivos unos pocos contextos y, al superarlos, descarta el más antiguo: con uno
+  por pestaña, las más viejas dejaban de repintarse.

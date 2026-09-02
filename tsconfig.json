@@ -6,10 +6,20 @@
     "strict": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
-    "lib": ["ES2021", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"],
+    "lib": [
+      "ES2021",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "vite/client"
+    ],
     "noEmit": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

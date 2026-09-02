@@ -154,14 +154,14 @@ body {
 
 /* ---------- Zona principal ---------- */
 
-#main {
+.main {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
 }
 
-#topbar {
+.topbar {
   height: 64px;
   display: flex;
   align-items: center;
@@ -201,8 +201,13 @@ button.ghost, button.primary {
   color: var(--fg-dim);
 }
 
-button.ghost:hover { color: var(--fg); background: var(--bg-elev); }
-button.danger:hover { color: #fff; background: var(--danger); border-color: var(--danger); }
+button.ghost:hover:not(:disabled) { color: var(--fg); background: var(--bg-elev); }
+button.ghost:disabled { opacity: 0.4; cursor: default; }
+button.danger:hover:not(:disabled) {
+  color: #fff;
+  background: var(--danger);
+  border-color: var(--danger);
+}
 
 button.primary {
   background: var(--accent);
@@ -215,6 +220,35 @@ button.primary {
   flex: 1;
   min-height: 0;
   position: relative;
+}
+
+.term-mount { position: absolute; inset: 0; }
+
+/* Atajo visible cuando la vista se despega del final de la salida. */
+.to-bottom {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.to-bottom:hover { border-color: var(--accent); }
+
+.to-bottom .key {
+  font-size: 11px;
+  color: var(--fg-dim);
 }
 
 .term-host {
