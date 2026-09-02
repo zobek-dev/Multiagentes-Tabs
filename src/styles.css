@@ -10,6 +10,7 @@
   --accent: #d97757;
   --danger: #e5534b;
   --ok: #4ec9a0;
+  --warn: #d7ba7d;
   --radius: 8px;
   color-scheme: dark;
 }
@@ -80,7 +81,7 @@ body {
 .session-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   padding: 7px 9px;
   border: none;
   border-radius: var(--radius);
@@ -99,16 +100,66 @@ body {
   color: var(--fg);
 }
 
-.session-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+.session-item.unread .session-name { color: var(--fg); font-weight: 600; }
+.session-item.exited .session-name { color: #5f6875; }
+
+/* ---------- Distintivo del agente y su estado ---------- */
+
+.agent-badge {
+  position: relative;
   flex: none;
-  background: var(--ok);
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--agent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--agent) 38%, transparent);
 }
 
-.session-item.exited .session-dot { background: #4a525f; }
-.session-item.busy .session-dot { background: var(--accent); }
+.agent-mark {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--agent);
+}
+
+/*
+ * El estado va montado sobre el distintivo, como en una lista de contactos:
+ * el borde del color del panel lo recorta y evita que se confunda con el
+ * cuadro del agente.
+ */
+.state-dot {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-sidebar);
+  background: var(--fg-dim);
+}
+
+.session-item.active .state-dot { border-color: var(--bg-elev); }
+
+.state-dot.listo { background: var(--ok); }
+.state-dot.atencion { background: var(--warn); }
+.state-dot.terminada { background: transparent; box-shadow: inset 0 0 0 2px #4a525f; }
+
+.state-dot.trabajando {
+  background: var(--accent);
+  animation: latido 1.4s ease-in-out infinite;
+}
+
+@keyframes latido {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.72); opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .state-dot.trabajando { animation: none; }
+}
 
 .session-labels {
   min-width: 0;
@@ -356,7 +407,13 @@ kbd {
   align-items: flex-start;
 }
 
-.profile-btn small { font-size: 10px; color: #5f6875; }
+.profile-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.profile-btn small { font-size: 10px; color: #5f6875; margin-left: 29px; }
 .profile-btn:hover { border-color: #3a424e; color: var(--fg); }
 
 .profile-btn.selected {

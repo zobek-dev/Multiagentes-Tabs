@@ -113,6 +113,23 @@ sistema; los demás aparecen atenuados pero se pueden lanzar igualmente.
 | Doble clic en la lista | Renombrar la sesión |
 | Clic derecho en la lista | Menú de la sesión |
 
+## Estado de cada pestaña
+
+Cada pestaña lleva el distintivo de su agente —un monograma sobre su color, no
+el logotipo del fabricante— con el estado montado en la esquina:
+
+| Indicador | Significado |
+| --- | --- |
+| Naranja, latiendo | El agente está escribiendo ahora mismo |
+| Ámbar | Sonó la campana: terminó o pide permiso, y aún no lo has atendido |
+| Verde | Sin actividad, esperando tu turno |
+| Gris hueco | El proceso terminó |
+
+El estado no se deduce leyendo la salida del agente: ese texto cambia con cada
+versión y con el idioma. Se apoya en dos señales que da la propia terminal,
+si están entrando datos en este instante y la campana (`BEL`) que los agentes
+disparan al pedir atención. Abrir la pestaña da por atendido el aviso.
+
 ## Gestión de sesiones
 
 El clic derecho sobre una pestaña abre su menú: **renombrar**, **volver al

@@ -1,6 +1,33 @@
 import { useEffect, useRef } from "preact/hooks";
+import { profileById } from "../profiles";
 import type { AppState } from "../state";
-import type { Session } from "../session";
+import type { Activity, Session } from "../session";
+
+const ESTADOS: Record<Activity, string> = {
+  trabajando: "Trabajando",
+  atencion: "Te espera",
+  listo: "Sin actividad",
+  terminada: "Proceso terminado",
+};
+
+/**
+ * Distintivo del agente: monograma sobre su color, con el estado en la
+ * esquina. Es una marca propia, no el logotipo del fabricante.
+ */
+function AgentBadge({ session }: { session: Session }) {
+  const profile = profileById(session.profileId);
+  const activity = session.activity;
+  return (
+    <span
+      class="agent-badge"
+      style={{ "--agent": profile?.color ?? "var(--fg-dim)" }}
+      title={`${profile?.label ?? session.profileId} · ${ESTADOS[activity]}`}
+    >
+      <span class="agent-mark">{profile?.mark ?? "?"}</span>
+      <span class={`state-dot ${activity}`} />
+    </span>
+  );
+}
 
 function shortenPath(path: string): string {
   if (!path) return "~";
@@ -56,7 +83,7 @@ export function Sidebar({ state }: { state: AppState }) {
           const clases = ["session-item"];
           if (session === state.active) clases.push("active");
           if (session.exited) clases.push("exited");
-          else if (session.unread) clases.push("busy");
+          else if (session.unread) clases.push("unread");
 
           return (
             <button
@@ -72,7 +99,7 @@ export function Sidebar({ state }: { state: AppState }) {
                 state.openMenu(session, event.clientX, event.clientY);
               }}
             >
-              <span class="session-dot" />
+              <AgentBadge session={session} />
               <span class="session-labels">
                 {state.renaming === session ? (
                   <NameEditor state={state} session={session} />

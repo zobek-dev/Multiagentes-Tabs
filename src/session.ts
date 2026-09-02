@@ -21,6 +21,18 @@ const THEME = {
   brightBlack: "#5f6875",
 };
 
+/**
+ * En qué anda el agente de esta pestaña.
+ *
+ * No se deduce leyendo su salida —el texto cambia con cada versión y con el
+ * idioma— sino de dos señales que da la propia terminal: si están entrando
+ * datos ahora mismo, y la campana que los agentes disparan al pedir atención.
+ */
+export type Activity = "trabajando" | "atencion" | "listo" | "terminada";
+
+/** Silencio a partir del cual se considera que el agente dejó de trabajar. */
+const QUIETO_MS = 1200;
+
 export interface SessionInit {
   /** Id persistente; se genera si la sesión es nueva. */
   id?: string;
@@ -50,6 +62,10 @@ export class Session {
   private launchCommand: string;
   exited = false;
   unread = false;
+  /** Si el agente pidió atención con la campana y aún no se ha atendido. */
+  private attention = false;
+  private working = false;
+  private quietTimer: number | null = null;
 
   readonly host: HTMLDivElement;
   private term: Terminal;
@@ -103,6 +119,13 @@ export class Session {
     this.observer = new ResizeObserver(() => this.fitNow());
     this.observer.observe(this.host);
 
+    // La campana es la única señal explícita que dan los agentes cuando
+    // terminan o piden permiso; xterm la expone tal cual.
+    this.term.onBell(() => {
+      this.attention = true;
+      this.onUpdate();
+    });
+
     this.term.onData((data) => {
       if (this.ptyId) void invoke("pty_write", { id: this.ptyId, data });
     });
@@ -122,6 +145,7 @@ export class Session {
     this.unlisten = await listen<string>(`pty://output/${id}`, (event) => {
       const bytes = Uint8Array.from(atob(event.payload), (c) => c.charCodeAt(0));
       this.term.write(this.decoder.decode(bytes, { stream: true }));
+      this.noteOutput();
       if (this.host.classList.contains("hidden") && !this.unread) {
         this.unread = true;
         this.onUpdate();
@@ -172,6 +196,11 @@ export class Session {
 
   markExited(code: number): void {
     this.exited = true;
+    this.working = false;
+    if (this.quietTimer !== null) {
+      window.clearTimeout(this.quietTimer);
+      this.quietTimer = null;
+    }
     this.term.write(`\r\n\x1b[38;5;244m— proceso terminado (código ${code}) —\x1b[0m\r\n`);
     this.onUpdate();
   }
@@ -186,6 +215,7 @@ export class Session {
     await this.disposePty();
     this.term.reset();
     this.exited = false;
+    this.attention = false;
     await this.start();
     this.onUpdate();
   }
@@ -193,6 +223,7 @@ export class Session {
   show(): void {
     this.host.classList.remove("hidden");
     this.unread = false;
+    this.attention = false;
     this.mountWebgl();
     requestAnimationFrame(() => {
       this.fitNow();
@@ -225,6 +256,29 @@ export class Session {
   private unmountWebgl(): void {
     this.webgl?.dispose();
     this.webgl = null;
+  }
+
+  /** Estado que muestra la pestaña en el panel lateral. */
+  get activity(): Activity {
+    if (this.exited) return "terminada";
+    if (this.working) return "trabajando";
+    return this.attention ? "atencion" : "listo";
+  }
+
+  /** Marca actividad y programa la vuelta a la calma tras el silencio. */
+  private noteOutput(): void {
+    if (!this.working) {
+      this.working = true;
+      // Escribir es trabajar: lo que pidiera atención ya está atendido.
+      this.attention = false;
+      this.onUpdate();
+    }
+    if (this.quietTimer !== null) window.clearTimeout(this.quietTimer);
+    this.quietTimer = window.setTimeout(() => {
+      this.quietTimer = null;
+      this.working = false;
+      this.onUpdate();
+    }, QUIETO_MS);
   }
 
   /** ¿La vista está pegada al final de la salida? */
@@ -283,6 +337,7 @@ export class Session {
   }
 
   async dispose(): Promise<void> {
+    if (this.quietTimer !== null) window.clearTimeout(this.quietTimer);
     await this.disposePty();
     this.observer?.disconnect();
     this.unmountWebgl();

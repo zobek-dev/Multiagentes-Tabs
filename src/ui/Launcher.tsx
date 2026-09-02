@@ -40,7 +40,12 @@ export function Launcher({ state }: { state: AppState }) {
                   class={clases.join(" ")}
                   onClick={() => state.updateLauncher({ profile })}
                 >
-                  <span>{profile.label}</span>
+                  <span class="profile-head">
+                    <span class="agent-badge" style={{ "--agent": profile.color }}>
+                      <span class="agent-mark">{profile.mark}</span>
+                    </span>
+                    {profile.label}
+                  </span>
                   <small>{instalado ? profile.hint : "no instalado"}</small>
                 </button>
               );

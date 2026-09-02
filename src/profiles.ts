@@ -20,6 +20,10 @@ export interface Profile {
    */
   resumeCommand?: string;
   hint: string;
+  /** Monograma de la pestaña: una o dos letras, no un logotipo ajeno. */
+  mark: string;
+  /** Color del monograma, para reconocer el agente de un vistazo. */
+  color: string;
 }
 
 export const PROFILES: Profile[] = [
@@ -31,8 +35,18 @@ export const PROFILES: Profile[] = [
     startTemplate: "claude --session-id {id} --dangerously-skip-permissions",
     resumeTemplate: "claude --resume {id} --dangerously-skip-permissions",
     hint: "claude",
+    mark: "C",
+    color: "#d97757",
   },
-  { id: "codex", label: "Codex", binary: "codex", command: "codex", hint: "codex" },
+  {
+    id: "codex",
+    label: "Codex",
+    binary: "codex",
+    command: "codex",
+    hint: "codex",
+    mark: "X",
+    color: "#8b93a7",
+  },
   {
     id: "gemini",
     label: "Gemini",
@@ -40,8 +54,18 @@ export const PROFILES: Profile[] = [
     command: "gemini",
     resumeCommand: "gemini --resume latest",
     hint: "gemini",
+    mark: "G",
+    color: "#5b8dd9",
   },
-  { id: "aider", label: "Aider", binary: "aider", command: "aider", hint: "aider" },
+  {
+    id: "aider",
+    label: "Aider",
+    binary: "aider",
+    command: "aider",
+    hint: "aider",
+    mark: "A",
+    color: "#4ec9a0",
+  },
   {
     id: "opencode",
     label: "opencode",
@@ -50,8 +74,18 @@ export const PROFILES: Profile[] = [
     resumeTemplate: "opencode --session {id}",
     resumeCommand: "opencode --continue",
     hint: "opencode",
+    mark: "O",
+    color: "#b18cd9",
   },
-  { id: "shell", label: "Shell", binary: null, command: "", hint: "sin comando" },
+  {
+    id: "shell",
+    label: "Shell",
+    binary: null,
+    command: "",
+    hint: "sin comando",
+    mark: "$",
+    color: "#7a8492",
+  },
 ];
 
 export function profileById(id: string): Profile | undefined {
